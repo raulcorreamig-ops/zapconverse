@@ -35,6 +35,7 @@ import {
 } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ConfirmationModal from "../ConfirmationModal";
+import InteractiveButtonsBuilder from "../InteractiveButtonsBuilder";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -100,6 +101,10 @@ const CampaignModal = ({
     message3: "",
     message4: "",
     message5: "",
+    interactiveButtons: "",
+    messageTitle: "",
+    messageSubtitle: "",
+    messageFooter: "",
     status: "INATIVA", // INATIVA, PROGRAMADA, EM_ANDAMENTO, CANCELADA, FINALIZADA,
     scheduledAt: "",
     whatsappId: "",
@@ -528,6 +533,7 @@ const CampaignModal = ({
                       <Tab label="Msg. 3" index={2} />
                       <Tab label="Msg. 4" index={3} />
                       <Tab label="Msg. 5" index={4} />
+                      <Tab label="Botões" index={5} />
                     </Tabs>
                     <Box style={{ paddingTop: 20, border: "none" }}>
                       {messageTab === 0 && (
@@ -544,6 +550,54 @@ const CampaignModal = ({
                       )}
                       {messageTab === 4 && (
                         <>{renderMessageField("message5")}</>
+                      )}
+                      {messageTab === 5 && (
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={4}>
+                            <Field
+                              as={TextField}
+                              label="Título da Mensagem"
+                              name="messageTitle"
+                              variant="outlined"
+                              margin="dense"
+                              fullWidth
+                              helperText="Opcional - Título em negrito acima da mensagem"
+                              disabled={!campaignEditable && campaign.status !== "CANCELADA"}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={4}>
+                            <Field
+                              as={TextField}
+                              label="Subtítulo"
+                              name="messageSubtitle"
+                              variant="outlined"
+                              margin="dense"
+                              fullWidth
+                              helperText="Opcional - Texto menor abaixo do título"
+                              disabled={!campaignEditable && campaign.status !== "CANCELADA"}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={4}>
+                            <Field
+                              as={TextField}
+                              label="Rodapé"
+                              name="messageFooter"
+                              variant="outlined"
+                              margin="dense"
+                              fullWidth
+                              helperText="Opcional - Texto no rodapé da mensagem"
+                              disabled={!campaignEditable && campaign.status !== "CANCELADA"}
+                            />
+                          </Grid>
+                          <Grid item xs={12}>
+                            <InteractiveButtonsBuilder
+                              value={values.interactiveButtons}
+                              onChange={(value) => {
+                                setCampaign({ ...campaign, interactiveButtons: value });
+                              }}
+                            />
+                          </Grid>
+                        </Grid>
                       )}
                     </Box>
                   </Grid>

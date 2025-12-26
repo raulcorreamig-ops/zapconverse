@@ -30,6 +30,7 @@ import questionNode from "./nodes/questionNode";
 import RemoveEdge from "./nodes/removeEdge";
 import singleBlockNode from "./nodes/singleBlockNode";
 import ticketNode from "./nodes/ticketNode";
+import interactiveButtonsNode from "./nodes/interactiveButtonsNode";
 
 import api from "../../services/api";
 
@@ -76,6 +77,7 @@ import FlowBuilderSingleBlockModal from "../../components/FlowBuilderSingleBlock
 import FlowBuilderTypebotModal from "../../components/FlowBuilderAddTypebotModal";
 import FlowBuilderOpenAIModal from "../../components/FlowBuilderAddOpenAIModal";
 import FlowBuilderAddQuestionModal from "../../components/FlowBuilderAddQuestionModal";
+import FlowBuilderAddInteractiveButtonsModal from "../../components/FlowBuilderAddInteractiveButtonsModal";
 
 import {
   AccessTime,
@@ -87,6 +89,7 @@ import {
   Message,
   MicNone,
   RocketLaunch,
+  TouchApp,
   Videocam,
 } from "@mui/icons-material";
 
@@ -133,6 +136,7 @@ const nodeTypes = {
   typebot: typebotNode,
   openai: openaiNode,
   question: questionNode,
+  interactiveButtons: interactiveButtonsNode,
 };
 
 const edgeTypes = {
@@ -175,6 +179,7 @@ const FlowBuilderConfig = () => {
   const [modalAddTypebot, setModalAddTypebot] = useState(null);
   const [modalAddOpenAI, setModalAddOpenAI] = useState(null);
   const [modalAddQuestion, setModalAddQuestion] = useState(null);
+  const [modalAddInteractiveButtons, setModalAddInteractiveButtons] = useState(null);
 
   const connectionLineStyle = { stroke: "#2b2b2b", strokeWidth: "6px" };
 
@@ -430,6 +435,10 @@ const FlowBuilderConfig = () => {
     addNode("question", data);
   };
 
+  const interactiveButtonsAdd = (data) => {
+    addNode("interactiveButtons", data);
+  };
+
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
   };
@@ -498,6 +507,9 @@ const FlowBuilderConfig = () => {
     }
     if (node.type === "question") {
       setModalAddQuestion("edit");
+    }
+    if (node.type === "interactiveButtons") {
+      setModalAddInteractiveButtons("edit");
     }
   };
 
@@ -840,6 +852,14 @@ const FlowBuilderConfig = () => {
         close={setModalAddQuestion}
       />
 
+      <FlowBuilderAddInteractiveButtonsModal
+        open={modalAddInteractiveButtons}
+        onSave={interactiveButtonsAdd}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddInteractiveButtons}
+      />
+
       <MainHeader>
         <Title>Desenhe seu fluxo</Title>
       </MainHeader>
@@ -1065,6 +1085,25 @@ const FlowBuilderConfig = () => {
                       }}
                     />
                     Menu
+                  </Button>
+                  <Button
+                    onClick={() => setModalAddInteractiveButtons("create")}
+                    variant="contained"
+                    style={{
+                      backgroundColor: "#4CAF50",
+                      color: "#ffffff",
+                      padding: 8,
+                      textTransform: "none"
+                    }}
+                  >
+                    <TouchApp
+                      sx={{
+                        width: "16px",
+                        height: "16px",
+                        marginRight: "4px"
+                      }}
+                    />
+                    Botões
                   </Button>
                   <Button
                     onClick={() => setModalAddAudio("create")}

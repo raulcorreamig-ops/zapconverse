@@ -72,6 +72,7 @@ const SendFlowManuallyService = async ({
   await ticket.update({
     hashFlowId: hashWebhookId,
     flowStopped: flow.id,
+    lastFlowId: nodes[0].id,  // Começar do primeiro nó
     status: "pending"
   });
 

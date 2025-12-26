@@ -89,7 +89,6 @@ import {
   Message,
   MicNone,
   RocketLaunch,
-  TouchApp,
   Videocam,
 } from "@mui/icons-material";
 
@@ -1096,7 +1095,7 @@ const FlowBuilderConfig = () => {
                       textTransform: "none"
                     }}
                   >
-                    <TouchApp
+                    <DynamicFeed
                       sx={{
                         width: "16px",
                         height: "16px",

@@ -356,6 +356,19 @@ const msgLocation = (image, latitude, longitude) => {
 export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
   try {
     let type = getTypeMessage(msg);
+    // Log temporário para debugar botões interativos
+    if (type === "interactiveResponseMessage" || type === "interactiveMessage") {
+      console.log("🔵 Tipo de mensagem recebida:", type);
+      console.log("🔵 Mensagem completa:", JSON.stringify(msg.message, null, 2));
+    }
+    
+    if (type === "buttonsResponseMessage") {
+      console.log("BUTTON CLICKED!");
+      console.log("Button ID:", msg.message?.buttonsResponseMessage?.selectedButtonId);
+      console.log("Button Text:", msg.message?.buttonsResponseMessage?.selectedDisplayText);
+      console.log("Full:", JSON.stringify(msg.message, null, 2));
+    }
+    
 
     const types = {
       conversation: msg?.message?.conversation,
@@ -366,13 +379,14 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
       videoMessage: msg.message?.videoMessage?.caption,
       extendedTextMessage: msg.message?.extendedTextMessage?.text,
       buttonsResponseMessage:
-        msg.message?.buttonsResponseMessage?.selectedButtonId,
+        msg.message?.buttonsResponseMessage?.selectedDisplayText || msg.message?.buttonsResponseMessage?.selectedButtonId,
       templateButtonReplyMessage:
         msg.message?.templateButtonReplyMessage?.selectedId,
       messageContextInfo:
         msg.message?.buttonsResponseMessage?.selectedButtonId ||
         msg.message?.listResponseMessage?.title,
       buttonsMessage:
+        msg.message?.buttonsMessage?.contentText ||
         getBodyButton(msg) ||
         msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId,
       viewOnceMessage:
@@ -397,7 +411,9 @@ export const getBodyMessage = (msg: proto.IWebMessageInfo): string | null => {
         getBodyButton(msg) || msg.message?.listResponseMessage?.title,
       listResponseMessage:
         msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId,
-      reactionMessage: msg.message?.reactionMessage?.text || "reaction"
+      reactionMessage: msg.message?.reactionMessage?.text || "reaction",
+      interactiveResponseMessage: msg.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson || msg.message?.conversation,
+      interactiveMessage: msg.message?.interactiveMessage?.body?.text || msg.message?.interactiveMessage?.header?.title || "Menu interativo"
     };
 
     const objKey = Object.keys(types).find(key => key === type);
@@ -484,14 +500,18 @@ const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
   // Se o remoteJid termina com @lid, é um link/canal - buscar número real
   if (contactId?.endsWith("@lid")) {
     // Tentar extrair do campo key.participant (contém o número real)
-    const senderPn = msg.key.participant;
+    const senderPn = msg.key.participant || (msg.key as any).remoteJidAlt;
     if (senderPn && senderPn.includes("@s.whatsapp.net")) {
       contactId = senderPn;
-      console.log(`Corrigido @lid para número real: ${senderPn}`);
+      console.log(`✅ @lid corrigido: ${msg.key.remoteJid} -> ${senderPn}`);
     } else {
-      console.warn("Mensagem com @lid sem participant válido. Isso pode gerar número inválido:", msg.key);
-      // Última alternativa: usar o remoteJid mesmo sendo @lid
-      // mas isso PODE gerar números inválidos - precisa investigação adicional
+      console.error("❌ @lid sem alternativa válida:", {
+        remoteJid: msg.key.remoteJid,
+        participant: msg.key.participant,
+        remoteJidAlt: (msg.key as any).remoteJidAlt
+      });
+      // IMPORTANTE: NÃO criar contato com @lid - isso causa duplicação!
+      throw new Error("Não foi possível extrair número real de mensagem @lid");
     }
   }
 
@@ -993,7 +1013,15 @@ export const verifyMessage = async (
   const io = getIO();
   const quotedMsg = await verifyQuotedMessage(msg);
   const body = getBodyMessage(msg);
-  const isEdited = getTypeMessage(msg) == "editedMessage";
+  const msgType = getTypeMessage(msg);
+  const isEdited = msgType == "editedMessage";
+  
+  if (msgType === "interactiveMessage") {
+    console.log("💾 Salvando mensagem interativa no banco:");
+    console.log("  - body:", body);
+    console.log("  - ticket:", ticket.id);
+    console.log("  - fromMe:", msg.key.fromMe);
+  }
 
   const messageData = {
     id: isEdited
@@ -1079,9 +1107,16 @@ const isValidMsg = (msg: proto.IWebMessageInfo): boolean => {
       msgType === "protocolMessage" ||
       msgType === "listResponseMessage" ||
       msgType === "listMessage" ||
-      msgType === "viewOnceMessage";
+      msgType === "viewOnceMessage" ||
+      msgType === "interactiveMessage" ||
+      msgType === "nativeFlowResponseMessage" ||
+      msgType === "interactiveResponseMessage";
 
+    console.log("DEBUG Tipo:", msgType);
+    
     if (!ifType) {
+      console.log("TIPO DESCONHECIDO:", msgType);
+      console.log("MSG COMPLETA:", JSON.stringify(msg.message, null, 2));
       logger.warn(`#### Nao achou o type em isValidMsg: ${msgType}
 ${JSON.stringify(msg?.message)}`);
       Sentry.setExtra("Mensagem", { BodyMsg: msg.message, msg, msgType });
@@ -2185,12 +2220,16 @@ export const handleMessageIntegration = async (
         isFirstMsg
       );
     } else {
+      console.log("MENU DEBUG: isMenu =", true);
+      console.log("MENU DEBUG: ticket.lastMessage =", ticket.lastMessage, "parseInt =", parseInt(ticket.lastMessage), "isNaN =", isNaN(parseInt(ticket.lastMessage)));
+      console.log("MENU DEBUG: ticket.status =", ticket.status);
 
       if (
         !isNaN(parseInt(ticket.lastMessage)) &&
         ticket.status !== "open" &&
         ticket.status !== "closed"
       ) {
+        console.log("MENU DEBUG: Entrando em flowBuilderQueue");
         await flowBuilderQueue(
           ticket,
           msg,
@@ -2288,6 +2327,8 @@ const handleMessage = async (
 
     const bodyMessage = getBodyMessage(msg);
     const msgType = getTypeMessage(msg);
+    
+    console.log("MSG DEBUG - msgType:", msgType, "bodyMessage:", bodyMessage);
 
     const hasMedia =
       msg.message?.audioMessage ||
@@ -2587,6 +2628,42 @@ const handleMessage = async (
       return;
     }
 
+    // Processar menu em fluxo manual (sem integrationId)
+    if (!isNil(flow) && isMenu && !msg.key.fromMe && ticket.flowStopped) {
+      console.log("FLUXO MANUAL - Processando resposta de menu");
+      const body = getBodyMessage(msg);
+      if (body) {
+        console.log("FLUXO MANUAL - body:", body);
+        const nodes: INodes[] = flow.flow["nodes"];
+        const connections: IConnections[] = flow.flow["connections"];
+
+        const mountDataContact = {
+          number: contact.number,
+          name: contact.name,
+          email: contact.email
+        };
+
+        console.log("FLUXO MANUAL - Chamando ActionsWebhookService com pressKey:", body);
+        await ActionsWebhookService(
+          whatsapp.id,
+          parseInt(ticket.flowStopped),
+          ticket.companyId,
+          nodes,
+          connections,
+          ticket.lastFlowId,
+          null,
+          "",
+          "",
+          body,  // ← PASSANDO O BODY COMO PRESSKEY!
+          ticket.id,
+          mountDataContact,
+          msg
+        );
+      }
+
+      return;
+    }
+
     if (isOpenai && !isNil(flow) && !ticket.queue) {
       const nodeSelected = flow.flow["nodes"].find(
         (node: any) => node.id === ticket.lastFlowId
@@ -2651,7 +2728,7 @@ const handleMessage = async (
       !isNil(whatsapp.integrationId) &&
       !ticket.useIntegration
     ) {
-
+      console.log("INTEGRACAO NA CONEXAO - isMenu:", isMenu);
       const integrations = await ShowQueueIntegrationService(
         whatsapp.integrationId,
         companyId
@@ -2690,6 +2767,7 @@ const handleMessage = async (
       ticket.queue
     ) {
       console.log("entrou no type 1974");
+      console.log("INTEGRACAO NA FILA - isMenu:", isMenu, "ticket.queue:", ticket.queue);
       const integrations = await ShowQueueIntegrationService(
         ticket.integrationId,
         companyId

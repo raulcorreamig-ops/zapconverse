@@ -70,6 +70,20 @@ export const ActionsWebhookService = async (
 ): Promise<string> => {
   try {
     const io = getIO();
+    // Processar pressKey de botões interativos (option_1 -> 1, option_2 -> 2)
+    if (pressKey && pressKey.startsWith("option_")) {
+      const originalPressKey = pressKey;
+      pressKey = pressKey.replace("option_", "");
+      console.log("🔘 PressKey processado:", originalPressKey, "->", pressKey);
+    }
+    
+    // Processar pressKey de botões interativos (option_1 -> 1, option_2 -> 2)
+    if (pressKey && pressKey.startsWith("option_")) {
+      const originalPressKey = pressKey;
+      pressKey = pressKey.replace("option_", "");
+      console.log("🔘 PressKey processado:", originalPressKey, "->", pressKey);
+    }
+    
     let next = nextStage;
     console.log(
       "ActionWebhookService | 53",
@@ -614,63 +628,93 @@ export const ActionsWebhookService = async (
           } else {
             isMenu = false;
           }
-        } else {
+} else {
+          console.log("🔍 DEBUG nodeSelected.data:", JSON.stringify(nodeSelected.data, null, 2));
           console.log(681, "menu");
-          let optionsMenu = "";
-          nodeSelected.data.arrayOption.map(item => {
-            optionsMenu += `[${item.number}] ${item.value}\n`;
-          });
-
-          const menuCreate = `${nodeSelected.data.message}\n\n${optionsMenu}`;
-
-          const webhook = ticket.dataWebhook;
-
-          let msg;
-          if (webhook && webhook.hasOwnProperty("variables")) {
-            msg = {
-              body: replaceMessages(webhook, menuCreate),
-              number: numberClient,
-              companyId: companyId
-            };
-          } else {
-            msg = {
-              body: menuCreate,
-              number: numberClient,
-              companyId: companyId
-            };
-          }
-
+          
           const ticketDetails = await ShowTicketService(ticket.id, companyId);
 
-          //const messageData: MessageData = {
-          //  wid: randomString(50),
-          //  ticketId: ticket.id,
-          //  body: msg.body,
-          //  fromMe: true,
-          //  read: true
-          //};
+          // Verificar se deve usar botões interativos (Baileys 7.3.2)
+          if (nodeSelected.data.useInteractiveButtons) {
+            // USAR BOTÕES INTERATIVOS
+            console.log("📱 Enviando menu com botões interativos (Baileys 7.3.2)...");
+            
+            // Converter arrayOption para formato InteractiveButton[]
+            const buttons = nodeSelected.data.arrayOption.map((option: any) => ({
+              name: "quick_reply",
+              buttonParamsJson: JSON.stringify({
+                display_text: option.value,
+                id: `option_${option.number}`
+              })
+            }));
 
-          //await CreateMessageService({ messageData: messageData, companyId });
+            const webhook = ticket.dataWebhook;
+            let bodyMessage = nodeSelected.data.message;
+            
+            if (webhook && webhook.hasOwnProperty("variables")) {
+              bodyMessage = replaceMessages(webhook, bodyMessage);
+            }
 
-          //await SendWhatsAppMessage({ body: bodyFor, ticket: ticketDetails, quotedMsg: null })
+            await typeSimulation(ticket, "composing");
 
-          // await SendMessage(whatsapp, {
-          //   number: numberClient,
-          //   body: msg.body
-          // });
+            // Usar SendMessageFlow com botões
+            const sentMessage = await SendMessageFlow(whatsapp, {
+              number: numberClient,
+              body: bodyMessage,
+              buttons: buttons,
+              footer: "Selecione uma opção:"
+            });
+            
+            console.log("✅ SendMessageFlow executado com interactive buttons");
+            
+            // Salvar mensagem no banco de dados
+            if (sentMessage && ticket) {
+              const { verifyMessage } = await import("../WbotServices/wbotMessageListener");
+              await verifyMessage(sentMessage, ticketDetails, ticketDetails.contact);
+              console.log("✅ Mensagem de menu salva no banco");
+            }
 
-          await typeSimulation(ticket, "composing");
+          } else {
+            // USAR MENU DE TEXTO TRADICIONAL (fallback)
+            console.log("📝 Enviando menu como texto formatado (fallback)...");
+            
+            let optionsMenu = "";
+            nodeSelected.data.arrayOption.map(item => {
+              optionsMenu += `[${item.number}] ${item.value}\n`;
+            });
 
-          await SendWhatsAppMessage({
-            body: msg.body,
-            ticket: ticketDetails,
-            quotedMsg: null
-          });
+            const menuCreate = `${nodeSelected.data.message}\n\n${optionsMenu}`;
+
+            const webhook = ticket.dataWebhook;
+
+            let msg;
+            if (webhook && webhook.hasOwnProperty("variables")) {
+              msg = {
+                body: replaceMessages(webhook, menuCreate),
+                number: numberClient,
+                companyId: companyId
+              };
+            } else {
+              msg = {
+                body: menuCreate,
+                number: numberClient,
+                companyId: companyId
+              };
+            }
+
+            await typeSimulation(ticket, "composing");
+
+            await SendWhatsAppMessage({
+              body: msg.body,
+              ticket: ticketDetails,
+              quotedMsg: null
+            });
+          }
 
           SetTicketMessagesAsRead(ticketDetails);
 
           await ticketDetails.update({
-            lastMessage: formatBody(msg.body, ticket.contact)
+            lastMessage: formatBody(nodeSelected.data.message, ticket.contact)
           });
           await intervalWhats("1");
 

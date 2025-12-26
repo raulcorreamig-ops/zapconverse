@@ -849,9 +849,31 @@ async function handleDispatchCampaign(job) {
     else {
       logger.info(`[🚩] - Enviando mensagem de texto da campanha | CampaignShippingId: ${campaignShippingId} CampanhaID: ${campaignId}`);
 
-      await wbot.sendMessage(chatId, {
-        text: body
-      });
+      // Verifica se a campanha tem botões interativos configurados
+      if (campaign.interactiveButtons && campaign.interactiveButtons.trim() !== '') {
+        try {
+          const interactiveButtons = JSON.parse(campaign.interactiveButtons);
+
+          logger.info(`[🚩] - Enviando mensagem com botões interativos | CampaignShippingId: ${campaignShippingId} CampanhaID: ${campaignId}`);
+
+          await wbot.sendMessage(chatId, {
+            text: body,
+            title: campaign.messageTitle || undefined,
+            subtitle: campaign.messageSubtitle || undefined,
+            footer: campaign.messageFooter || undefined,
+            interactiveButtons: interactiveButtons
+          });
+        } catch (error) {
+          logger.error(`[🚨] - Erro ao parsear botões interativos, enviando mensagem simples: ${error.message}`);
+          await wbot.sendMessage(chatId, {
+            text: body
+          });
+        }
+      } else {
+        await wbot.sendMessage(chatId, {
+          text: body
+        });
+      }
     }
 
     logger.info(`[🚩] - Atualizando campanha para enviada... | CampaignShippingId: ${campaignShippingId} CampanhaID: ${campaignId}`);

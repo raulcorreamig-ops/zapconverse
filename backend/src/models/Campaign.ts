@@ -42,6 +42,18 @@ class Campaign extends Model<Campaign> {
   @Column({ defaultValue: "" })
   message5: string;
 
+  @Column
+  interactiveButtons: string;
+
+  @Column
+  messageTitle: string;
+
+  @Column
+  messageSubtitle: string;
+
+  @Column
+  messageFooter: string;
+
   @Column({ defaultValue: "INATIVA" })
   status: string; // INATIVA, PROGRAMADA, EM_ANDAMENTO, CANCELADA, FINALIZADA
 

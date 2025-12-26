@@ -3,11 +3,16 @@ import GetWhatsappWbot from "./GetWhatsappWbot";
 import fs from "fs";
 
 import { getMessageOptions } from "../services/WbotServices/SendWhatsAppMedia";
+import { sendInteractiveMessage, InteractiveButton } from "./SendMessageWithButtons";
 
 export type MessageData = {
   number: number | string;
   body: string;
   mediaPath?: string;
+  buttons?: InteractiveButton[];
+  title?: string;
+  subtitle?: string;
+  footer?: string;
 };
 
 export const SendMessageFlow = async (
@@ -22,15 +27,21 @@ export const SendMessageFlow = async (
 
     let message;
 
-    const templateButtons = [
-      {index: 1, urlButton: {displayText: '⭐ Star Baileys on GitHub!', url: 'https://github.com/adiwajshing/Baileys'}},
-      {index: 2, callButton: {displayText: 'Call me!+1 (234) 5678-901'}},
-      {index: 3, quickReplyButton: {displayText: 'This is a reply, just like normal buttons!', id: 'id-like-buttons-message'}},
-  ]
-
     const body = `\u200e${messageData.body}`;
-    message = ''; // await wbot.sendMessage(chatId, { text: body, templateButtons: templateButtons }); TODO: Fix error on this template Buttons
 
+    // Se tiver botões, usa a nova função de mensagens interativas
+    if (messageData.buttons && messageData.buttons.length > 0) {
+      message = await sendInteractiveMessage(wbot, chatId, {
+        text: body,
+        title: messageData.title,
+        subtitle: messageData.subtitle,
+        footer: messageData.footer,
+        interactiveButtons: messageData.buttons
+      });
+    } else {
+      // Mensagem simples sem botões
+      message = await wbot.sendMessage(chatId, { text: body });
+    }
 
     return message;
   } catch (err: any) {

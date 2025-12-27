@@ -519,7 +519,7 @@ const getContactMessage = async (msg: proto.IWebMessageInfo, wbot: Session) => {
 
   return {
     id: contactId,
-    name: msg.key.fromMe ? rawNumber : msg.pushName
+    name: msg.pushName || rawNumber
   };
 };
 

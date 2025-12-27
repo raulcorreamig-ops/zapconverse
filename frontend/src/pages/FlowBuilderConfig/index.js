@@ -253,6 +253,7 @@ const FlowBuilderConfig = () => {
             data: {
               message: data.message,
               arrayOption: data.arrayOption,
+              useInteractiveButtons: data.useInteractiveButtons,
             },
             type: "menu",
           },

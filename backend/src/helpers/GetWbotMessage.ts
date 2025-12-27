@@ -1,5 +1,4 @@
 import { proto } from "@itsukichan/baileys";
-import WALegacySocket from "@itsukichan/baileys";
 import Ticket from "../models/Ticket";
 import GetTicketWbot from "./GetTicketWbot";
 import AppError from "../errors/AppError";

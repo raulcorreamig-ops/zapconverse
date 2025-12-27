@@ -9,7 +9,6 @@ import makeWASocket, {
   isJidBroadcast,
   CacheStore
 } from "@itsukichan/baileys";
-import makeWALegacySocket from "@itsukichan/baileys";
 import P from "pino";
 
 import Whatsapp from "../models/Whatsapp";
@@ -79,10 +78,8 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         const { id, name, provider } = whatsappUpdate;
 
         const { version, isLatest } = await fetchLatestBaileysVersion();
-        const isLegacy = provider === "stable" ? true : false;
 
         logger.info(`using WA v${version.join(".")}, isLatest: ${isLatest}`);
-        logger.info(`isLegacy: ${isLegacy}`);
         logger.info(`Starting session ${name}`);
         let retriesQrCode = 0;
 
@@ -118,30 +115,6 @@ export const initWASocket = async (whatsapp: Whatsapp): Promise<Session> => {
         //   printQRInTerminal: false,
         //   auth: state as AuthenticationState,
         //   generateHighQualityLinkPreview: false,
-        //   shouldIgnoreJid: jid => isJidBroadcast(jid),
-        //   browser: ["Chat", "Chrome", "10.15.7"],
-        //   patchMessageBeforeSending: (message) => {
-        //     const requiresPatch = !!(
-        //       message.buttonsMessage ||
-        //       // || message.templateMessage
-        //       message.listMessage
-        //     );
-        //     if (requiresPatch) {
-        //       message = {
-        //         viewOnceMessage: {
-        //           message: {
-        //             messageContextInfo: {
-        //               deviceListMetadataVersion: 2,
-        //               deviceListMetadata: {},
-        //             },
-        //             ...message,
-        //           },
-        //         },
-        //       };
-        //     }
-
-        //     return message;
-        //   },
         // })
 
         wsocket.ev.on(

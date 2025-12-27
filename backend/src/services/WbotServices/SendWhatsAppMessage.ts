@@ -1,5 +1,4 @@
 import { WAMessage } from "@itsukichan/baileys";
-import WALegacySocket from "@itsukichan/baileys"
 import * as Sentry from "@sentry/node";
 import AppError from "../../errors/AppError";
 import GetTicketWbot from "../../helpers/GetTicketWbot";

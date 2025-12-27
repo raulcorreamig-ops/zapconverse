@@ -2629,11 +2629,28 @@ const handleMessage = async (
     }
 
     // Processar menu em fluxo manual (sem integrationId)
+    console.log("DEBUG FLUXO:", {
+      hasFlow: !isNil(flow),
+      isMenu,
+      isFromMe: msg.key.fromMe,
+      flowStopped: ticket.flowStopped,
+      lastFlowId: ticket.lastFlowId,
+      ticketStatus: ticket.status
+    });
+    
     if (!isNil(flow) && isMenu && !msg.key.fromMe && ticket.flowStopped) {
       console.log("FLUXO MANUAL - Processando resposta de menu");
+      const msgType = getTypeMessage(msg);
       const body = getBodyMessage(msg);
-      if (body) {
-        console.log("FLUXO MANUAL - body:", body);
+      
+      // Extrair o ID do botão (option_1, option_2, etc)
+      let buttonId = body;
+      if (msgType === "buttonsResponseMessage") {
+        buttonId = msg.message?.buttonsResponseMessage?.selectedButtonId || body;
+      }
+      
+      if (buttonId) {
+        console.log("FLUXO MANUAL - buttonId:", buttonId, "body:", body);
         const nodes: INodes[] = flow.flow["nodes"];
         const connections: IConnections[] = flow.flow["connections"];
 
@@ -2643,7 +2660,7 @@ const handleMessage = async (
           email: contact.email
         };
 
-        console.log("FLUXO MANUAL - Chamando ActionsWebhookService com pressKey:", body);
+        console.log("FLUXO MANUAL - Chamando ActionsWebhookService com pressKey:", buttonId);
         await ActionsWebhookService(
           whatsapp.id,
           parseInt(ticket.flowStopped),
@@ -2654,7 +2671,7 @@ const handleMessage = async (
           null,
           "",
           "",
-          body,  // ← PASSANDO O BODY COMO PRESSKEY!
+          buttonId,  // ← PASSANDO O BUTTON ID COMO PRESSKEY!
           ticket.id,
           mountDataContact,
           msg

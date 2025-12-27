@@ -16,7 +16,6 @@ import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import CircularProgress from "@material-ui/core/CircularProgress";
-import { Checkbox, FormControlLabel } from "@material-ui/core";
 
 import { i18n } from "../../translate/i18n";
 
@@ -98,7 +97,6 @@ const FlowBuilderMenuModal = ({ open, onSave, onUpdate, data, close }) => {
   const [textDig, setTextDig] = useState();
 
   const [arrayOption, setArrayOption] = useState([]);
-  const [useInteractiveButtons, setUseInteractiveButtons] = useState(false);
 
   const [labels, setLabels] = useState({
     title: "Adicionar menu ao fluxo",
@@ -113,7 +111,6 @@ const FlowBuilderMenuModal = ({ open, onSave, onUpdate, data, close }) => {
       });
       setTextDig(data.data.message);
       setArrayOption(data.data.arrayOption);
-      setUseInteractiveButtons(data.data.useInteractiveButtons || false);
       setActiveModal(true);
     } else if (open === "create") {
       setLabels({
@@ -122,7 +119,6 @@ const FlowBuilderMenuModal = ({ open, onSave, onUpdate, data, close }) => {
       });
       setTextDig();
       setArrayOption([]);
-      setUseInteractiveButtons(false);
       setActiveModal(true);
     } else {
       setActiveModal(false);
@@ -145,7 +141,7 @@ const FlowBuilderMenuModal = ({ open, onSave, onUpdate, data, close }) => {
       handleClose();
       onUpdate({
         ...data,
-        data: { message: textDig, arrayOption: arrayOption, useInteractiveButtons: useInteractiveButtons }
+        data: { message: textDig, arrayOption: arrayOption, useInteractiveButtons: true }
       });
       return;
     } else if (open === "create") {
@@ -153,7 +149,7 @@ const FlowBuilderMenuModal = ({ open, onSave, onUpdate, data, close }) => {
       onSave({
         message: textDig,
         arrayOption: arrayOption,
-        useInteractiveButtons: useInteractiveButtons
+        useInteractiveButtons: true
       });
     }
   };
@@ -182,16 +178,7 @@ const FlowBuilderMenuModal = ({ open, onSave, onUpdate, data, close }) => {
               value={textDig}
               onChange={e => setTextDig(e.target.value)}
               className={classes.textField}
-              style={{ width: "100%" }}            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={useInteractiveButtons}
-                  onChange={(e) => setUseInteractiveButtons(e.target.checked)}
-                  color="primary"
-                />
-              }
-              label="Usar botões clicáveis (Baileys 7.3.2)"
+              style={{ width: "100%" }}
             />
             <Stack direction={"row"} justifyContent={"space-between"}>
               <Typography>Adicionar Opção</Typography>
